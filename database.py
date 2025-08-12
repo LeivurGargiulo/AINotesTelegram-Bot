@@ -1,30 +1,186 @@
 """
-Database operations for the Telegram Notes Bot.
-Handles SQLite database operations for storing and retrieving notes.
+Enhanced database operations for the Discord Notes Bot.
+Handles SQLite database operations with connection pooling, caching, and performance optimizations.
 """
 import sqlite3
 import json
-from datetime import datetime
-from typing import List, Dict, Optional, Tuple
-from config import DATABASE_FILE, TIMESTAMP_FORMAT, NOTES_PER_PAGE
-from logger import get_logger
+import asyncio
+import threading
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Tuple, Any
+from contextlib import contextmanager
+from functools import wraps
+import time
+
+from config import DATABASE_FILE, TIMESTAMP_FORMAT, NOTES_PER_PAGE, DATABASE_TIMEOUT, CACHE_ENABLED, CACHE_TTL
+from logger import get_logger, log_performance
 
 logger = get_logger(__name__)
 
 
+class DatabaseConnectionPool:
+    """Manages database connections with pooling for better performance."""
+    
+    def __init__(self, db_file: str, max_connections: int = 10, timeout: int = 30):
+        self.db_file = db_file
+        self.max_connections = max_connections
+        self.timeout = timeout
+        self._connections = []
+        self._lock = threading.Lock()
+        self._initialized = False
+    
+    def _initialize_pool(self):
+        """Initialize the connection pool."""
+        if self._initialized:
+            return
+        
+        with self._lock:
+            if self._initialized:
+                return
+            
+            # Create initial connections
+            for _ in range(min(3, self.max_connections)):
+                conn = sqlite3.connect(
+                    self.db_file,
+                    timeout=self.timeout,
+                    check_same_thread=False
+                )
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA synchronous=NORMAL")
+                conn.execute("PRAGMA cache_size=10000")
+                conn.execute("PRAGMA temp_store=MEMORY")
+                self._connections.append(conn)
+            
+            self._initialized = True
+            logger.info(f"Database connection pool initialized with {len(self._connections)} connections")
+    
+    @contextmanager
+    def get_connection(self):
+        """Get a database connection from the pool."""
+        self._initialize_pool()
+        
+        conn = None
+        try:
+            with self._lock:
+                if self._connections:
+                    conn = self._connections.pop()
+                else:
+                    # Create a new connection if pool is empty
+                    conn = sqlite3.connect(
+                        self.db_file,
+                        timeout=self.timeout,
+                        check_same_thread=False
+                    )
+                    conn.execute("PRAGMA journal_mode=WAL")
+                    conn.execute("PRAGMA synchronous=NORMAL")
+                    conn.execute("PRAGMA cache_size=10000")
+                    conn.execute("PRAGMA temp_store=MEMORY")
+            
+            yield conn
+        except Exception as e:
+            logger.error(f"Database connection error: {e}")
+            if conn:
+                try:
+                    conn.close()
+                except:
+                    pass
+            raise
+        finally:
+            # Return connection to pool if it's still valid
+            if conn:
+                try:
+                    conn.rollback()  # Rollback any uncommitted changes
+                    with self._lock:
+                        if len(self._connections) < self.max_connections:
+                            self._connections.append(conn)
+                        else:
+                            conn.close()
+                except:
+                    conn.close()
+    
+    def close_all(self):
+        """Close all connections in the pool."""
+        with self._lock:
+            for conn in self._connections:
+                try:
+                    conn.close()
+                except:
+                    pass
+            self._connections.clear()
+            self._initialized = False
+
+
+class Cache:
+    """Simple in-memory cache with TTL support."""
+    
+    def __init__(self, ttl: int = 300):
+        self.ttl = ttl
+        self._cache = {}
+        self._timestamps = {}
+        self._lock = threading.Lock()
+    
+    def get(self, key: str) -> Optional[Any]:
+        """Get a value from cache."""
+        with self._lock:
+            if key not in self._cache:
+                return None
+            
+            # Check if expired
+            if time.time() - self._timestamps[key] > self.ttl:
+                del self._cache[key]
+                del self._timestamps[key]
+                return None
+            
+            return self._cache[key]
+    
+    def set(self, key: str, value: Any):
+        """Set a value in cache."""
+        with self._lock:
+            self._cache[key] = value
+            self._timestamps[key] = time.time()
+    
+    def delete(self, key: str):
+        """Delete a value from cache."""
+        with self._lock:
+            self._cache.pop(key, None)
+            self._timestamps.pop(key, None)
+    
+    def clear(self):
+        """Clear all cached values."""
+        with self._lock:
+            self._cache.clear()
+            self._timestamps.clear()
+    
+    def cleanup_expired(self):
+        """Remove expired entries."""
+        current_time = time.time()
+        with self._lock:
+            expired_keys = [
+                key for key, timestamp in self._timestamps.items()
+                if current_time - timestamp > self.ttl
+            ]
+            for key in expired_keys:
+                del self._cache[key]
+                del self._timestamps[key]
+
+
 class NotesDatabase:
-    """Handles all database operations for notes."""
+    """Enhanced database operations for notes with caching and connection pooling."""
     
     def __init__(self, db_file: str = DATABASE_FILE):
         """Initialize database connection and create tables if they don't exist."""
         self.db_file = db_file
+        self.pool = DatabaseConnectionPool(db_file, timeout=DATABASE_TIMEOUT)
+        self.cache = Cache(CACHE_TTL) if CACHE_ENABLED else None
         self._create_tables()
-        logger.info(f"Database initialized with file: {db_file}")
+        logger.info(f"Enhanced database initialized with file: {db_file}")
     
     def _create_tables(self):
         """Create the notes table if it doesn't exist."""
-        with sqlite3.connect(self.db_file) as conn:
+        with self.pool.get_connection() as conn:
             cursor = conn.cursor()
+            
+            # Create notes table with indexes for better performance
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS notes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +190,20 @@ class NotesDatabase:
                     timestamp TEXT NOT NULL,
                     created_at TEXT NOT NULL
                 )
+            ''')
+            
+            # Create indexes for better query performance
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_notes_created_at ON notes(created_at)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_notes_user_category ON notes(user_id, category)
             ''')
             
             # Create reminders table for tracking scheduled reminders
@@ -49,14 +219,42 @@ class NotesDatabase:
                 )
             ''')
             
+            # Create indexes for reminders
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id)
+            ''')
+            cursor.execute('''
+                CREATE INDEX IF NOT EXISTS idx_reminders_note_id ON reminders(note_id)
+            ''')
+            
             conn.commit()
-            logger.info("Database tables created/verified")
+            logger.info("Database tables and indexes created/verified")
     
+    def _get_cache_key(self, operation: str, *args) -> str:
+        """Generate a cache key for an operation."""
+        return f"{operation}:{':'.join(str(arg) for arg in args)}"
+    
+    def _invalidate_user_cache(self, user_id: int):
+        """Invalidate all cache entries for a user."""
+        if not self.cache:
+            return
+        
+        # This is a simplified invalidation - in production, you might want
+        # a more sophisticated cache invalidation strategy
+        keys_to_delete = []
+        for key in self.cache._cache.keys():
+            if f"user_id:{user_id}" in key:
+                keys_to_delete.append(key)
+        
+        for key in keys_to_delete:
+            self.cache.delete(key)
+    
+    @log_performance("add_note")
     def add_note(self, user_id: int, note_text: str, category: str) -> int:
         """Add a new note to the database and return its ID."""
         timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
         
-        with sqlite3.connect(self.db_file) as conn:
+        with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 INSERT INTO notes (user_id, note_text, category, timestamp, created_at)
@@ -64,13 +262,18 @@ class NotesDatabase:
             ''', (user_id, note_text, category, timestamp, timestamp))
             conn.commit()
             note_id = cursor.lastrowid
+            
+            # Invalidate user cache
+            self._invalidate_user_cache(user_id)
+            
             logger.info(f"Added note {note_id} for user {user_id} in category {category}")
             return note_id
     
+    @log_performance("get_notes")
     def get_notes(self, user_id: int, category: Optional[str] = None, 
                   page: int = 1, per_page: int = NOTES_PER_PAGE) -> Tuple[List[Dict], int]:
         """
-        Get notes for a user with pagination support.
+        Get notes for a user with pagination support and caching.
         
         Args:
             user_id: User ID
@@ -81,9 +284,17 @@ class NotesDatabase:
         Returns:
             Tuple of (notes_list, total_count)
         """
+        # Try cache first
+        cache_key = self._get_cache_key("get_notes", user_id, category, page, per_page)
+        if self.cache:
+            cached_result = self.cache.get(cache_key)
+            if cached_result:
+                logger.debug(f"Cache hit for notes query: {cache_key}")
+                return cached_result
+        
         offset = (page - 1) * per_page
         
-        with sqlite3.connect(self.db_file) as conn:
+        with self.pool.get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
@@ -123,12 +334,19 @@ class NotesDatabase:
             rows = cursor.fetchall()
             notes = [dict(row) for row in rows]
             
+            result = (notes, total_count)
+            
+            # Cache the result
+            if self.cache:
+                self.cache.set(cache_key, result)
+            
             logger.info(f"Retrieved {len(notes)} notes for user {user_id} (page {page}, total: {total_count})")
-            return notes, total_count
+            return result
     
-    def delete_note(self, user_id: int, note_id: int) -> bool:
+    @log_performance("delete_note")
+    def delete_note(self, note_id: int, user_id: int) -> bool:
         """Delete a note by ID. Returns True if successful, False if note not found."""
-        with sqlite3.connect(self.db_file) as conn:
+        with self.pool.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 DELETE FROM notes
@@ -138,16 +356,19 @@ class NotesDatabase:
             success = cursor.rowcount > 0
             
             if success:
+                # Invalidate user cache
+                self._invalidate_user_cache(user_id)
                 logger.info(f"Deleted note {note_id} for user {user_id}")
             else:
                 logger.warning(f"Failed to delete note {note_id} for user {user_id} (not found or no permission)")
                 
             return success
     
+    @log_performance("search_notes")
     def search_notes(self, user_id: int, keyword: str, 
                     page: int = 1, per_page: int = NOTES_PER_PAGE) -> Tuple[List[Dict], int]:
         """
-        Search notes by keyword with pagination support.
+        Search notes by keyword with pagination support and caching.
         
         Args:
             user_id: User ID
@@ -158,9 +379,17 @@ class NotesDatabase:
         Returns:
             Tuple of (notes_list, total_count)
         """
+        # Try cache first
+        cache_key = self._get_cache_key("search_notes", user_id, keyword, page, per_page)
+        if self.cache:
+            cached_result = self.cache.get(cache_key)
+            if cached_result:
+                logger.debug(f"Cache hit for search query: {cache_key}")
+                return cached_result
+        
         offset = (page - 1) * per_page
         
-        with sqlite3.connect(self.db_file) as conn:
+        with self.pool.get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
@@ -183,12 +412,19 @@ class NotesDatabase:
             rows = cursor.fetchall()
             notes = [dict(row) for row in rows]
             
+            result = (notes, total_count)
+            
+            # Cache the result
+            if self.cache:
+                self.cache.set(cache_key, result)
+            
             logger.info(f"Search for '{keyword}' returned {len(notes)} notes for user {user_id} (page {page}, total: {total_count})")
-            return notes, total_count
+            return result
     
+    @log_performance("get_note_by_id")
     def get_note_by_id(self, note_id: int, user_id: Optional[int] = None) -> Optional[Dict]:
         """Get a specific note by ID, optionally filtered by user."""
-        with sqlite3.connect(self.db_file) as conn:
+        with self.pool.get_connection() as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
             
@@ -207,72 +443,66 @@ class NotesDatabase:
             
             row = cursor.fetchone()
             if row:
-                logger.info(f"Retrieved note {note_id}" + (f" for user {user_id}" if user_id else ""))
                 return dict(row)
-            else:
-                logger.warning(f"Note {note_id} not found" + (f" for user {user_id}" if user_id else ""))
-                return None
+            return None
     
-    def get_note_count(self, user_id: int, category: Optional[str] = None) -> int:
-        """Get the total number of notes for a user, optionally filtered by category."""
-        with sqlite3.connect(self.db_file) as conn:
+    def get_user_stats(self, user_id: int) -> Dict[str, Any]:
+        """Get statistics for a user."""
+        with self.pool.get_connection() as conn:
             cursor = conn.cursor()
-            if category:
-                cursor.execute('''
-                    SELECT COUNT(*) FROM notes WHERE user_id = ? AND category = ?
-                ''', (user_id, category))
-            else:
-                cursor.execute('''
-                    SELECT COUNT(*) FROM notes WHERE user_id = ?
-                ''', (user_id,))
-            return cursor.fetchone()[0]
-    
-    def add_reminder(self, user_id: int, note_id: int, job_id: str, reminder_time: str) -> bool:
-        """Add a reminder record to the database."""
-        timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
-        
-        with sqlite3.connect(self.db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                INSERT INTO reminders (user_id, note_id, job_id, reminder_time, created_at)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (user_id, note_id, job_id, reminder_time, timestamp))
-            conn.commit()
-            logger.info(f"Added reminder record for user {user_id}, note {note_id}, job {job_id}")
-            return True
-    
-    def remove_reminder(self, job_id: str) -> bool:
-        """Remove a reminder record from the database."""
-        with sqlite3.connect(self.db_file) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                DELETE FROM reminders WHERE job_id = ?
-            ''', (job_id,))
-            conn.commit()
-            success = cursor.rowcount > 0
             
-            if success:
-                logger.info(f"Removed reminder record for job {job_id}")
-            else:
-                logger.warning(f"Reminder record for job {job_id} not found")
-                
-            return success
-    
-    def get_user_reminders(self, user_id: int) -> List[Dict]:
-        """Get all reminder records for a user."""
-        with sqlite3.connect(self.db_file) as conn:
-            conn.row_factory = sqlite3.Row
-            cursor = conn.cursor()
+            # Get total notes count
             cursor.execute('''
-                SELECT r.id, r.note_id, r.job_id, r.reminder_time, r.created_at,
-                       n.note_text, n.category
-                FROM reminders r
-                JOIN notes n ON r.note_id = n.id
-                WHERE r.user_id = ?
-                ORDER BY r.reminder_time ASC
+                SELECT COUNT(*) FROM notes WHERE user_id = ?
             ''', (user_id,))
+            total_notes = cursor.fetchone()[0]
             
-            rows = cursor.fetchall()
-            reminders = [dict(row) for row in rows]
-            logger.info(f"Retrieved {len(reminders)} reminders for user {user_id}")
-            return reminders
+            # Get notes by category
+            cursor.execute('''
+                SELECT category, COUNT(*) as count
+                FROM notes
+                WHERE user_id = ?
+                GROUP BY category
+            ''', (user_id,))
+            category_counts = dict(cursor.fetchall())
+            
+            # Get recent activity
+            cursor.execute('''
+                SELECT COUNT(*) FROM notes
+                WHERE user_id = ? AND created_at >= datetime('now', '-7 days')
+            ''', (user_id,))
+            recent_notes = cursor.fetchone()[0]
+            
+            return {
+                'total_notes': total_notes,
+                'category_counts': category_counts,
+                'recent_notes': recent_notes
+            }
+    
+    def cleanup_old_reminders(self, days: int = 30):
+        """Clean up old reminders that are no longer needed."""
+        cutoff_date = datetime.now() - timedelta(days=days)
+        cutoff_str = cutoff_date.strftime(TIMESTAMP_FORMAT)
+        
+        with self.pool.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM reminders
+                WHERE reminder_time < ?
+            ''', (cutoff_str,))
+            deleted_count = cursor.rowcount
+            conn.commit()
+            
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} old reminders")
+    
+    def close(self):
+        """Close all database connections."""
+        self.pool.close_all()
+        if self.cache:
+            self.cache.clear()
+        logger.info("Database connections closed")
+
+
+# Global database instance
+db = NotesDatabase()
