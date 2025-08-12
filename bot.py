@@ -5,9 +5,11 @@ Handles bot initialization, command registration, and startup.
 """
 import logging
 import asyncio
-from telegram.ext import Application, CommandHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 from config import BOT_TOKEN
+from logger import get_logger
+from reminder_scheduler import scheduler
 from bot_handlers import (
     start_command,
     help_command,
@@ -15,15 +17,14 @@ from bot_handlers import (
     list_notes_command,
     delete_note_command,
     search_notes_command,
+    remind_command,
+    reminders_command,
+    handle_pagination_callback,
     error_handler
 )
 
 # Set up logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def setup_bot():
@@ -38,6 +39,11 @@ def setup_bot():
     application.add_handler(CommandHandler("list", list_notes_command))
     application.add_handler(CommandHandler("delete", delete_note_command))
     application.add_handler(CommandHandler("search", search_notes_command))
+    application.add_handler(CommandHandler("remind", remind_command))
+    application.add_handler(CommandHandler("reminders", reminders_command))
+    
+    # Add callback query handler for pagination
+    application.add_handler(CallbackQueryHandler(handle_pagination_callback))
     
     # Add error handler
     application.add_error_handler(error_handler)
@@ -51,6 +57,11 @@ async def main():
     
     # Set up the bot
     application = setup_bot()
+    
+    # Set up reminder scheduler
+    scheduler.set_bot(application.bot)
+    scheduler.start()
+    logger.info("Reminder scheduler started")
     
     # Start the bot
     logger.info("Bot is starting...")
@@ -67,6 +78,10 @@ async def main():
         logger.info("Received stop signal, shutting down...")
     finally:
         # Clean shutdown
+        logger.info("Stopping reminder scheduler...")
+        scheduler.stop()
+        
+        logger.info("Stopping bot...")
         await application.updater.stop()
         await application.stop()
         await application.shutdown()

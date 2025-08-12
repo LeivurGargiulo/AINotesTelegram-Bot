@@ -1,0 +1,73 @@
+2025-08-12 08:35:31,157 - llm_client - INFO - LLM client initialized with API: http://localhost:11434/api/generate, model: llama2
+2025-08-12 08:35:31,163 - database - INFO - Database tables created/verified
+2025-08-12 08:35:31,163 - database - INFO - Database initialized with file: /tmp/tmpamgs3x3o.db
+2025-08-12 08:35:31,164 - database - INFO - Added note 1 for user 12345 in category task
+2025-08-12 08:35:31,165 - database - INFO - Added note 2 for user 12345 in category idea
+2025-08-12 08:35:31,167 - database - INFO - Added note 3 for user 12345 in category quote
+2025-08-12 08:35:31,167 - database - INFO - Added note 4 for user 12345 in category other
+2025-08-12 08:35:31,168 - database - INFO - Retrieved 4 notes for user 12345 (page 1, total: 4)
+2025-08-12 08:35:31,168 - database - INFO - Retrieved 1 notes for user 12345 (page 1, total: 1)
+2025-08-12 08:35:31,168 - database - INFO - Search for 'groceries' returned 1 notes for user 12345 (page 1, total: 1)
+2025-08-12 08:35:31,169 - database - INFO - Added note 5 for user 12345 in category task
+2025-08-12 08:35:31,170 - database - INFO - Added note 6 for user 12345 in category task
+2025-08-12 08:35:31,172 - database - INFO - Added note 7 for user 12345 in category task
+2025-08-12 08:35:31,173 - database - INFO - Added note 8 for user 12345 in category task
+2025-08-12 08:35:31,173 - database - INFO - Added note 9 for user 12345 in category task
+2025-08-12 08:35:31,175 - database - INFO - Added note 10 for user 12345 in category task
+2025-08-12 08:35:31,176 - database - INFO - Added note 11 for user 12345 in category task
+2025-08-12 08:35:31,177 - database - INFO - Added note 12 for user 12345 in category task
+2025-08-12 08:35:31,179 - database - INFO - Added note 13 for user 12345 in category task
+2025-08-12 08:35:31,179 - database - INFO - Added note 14 for user 12345 in category task
+2025-08-12 08:35:31,180 - database - INFO - Added note 15 for user 12345 in category task
+2025-08-12 08:35:31,181 - database - INFO - Added note 16 for user 12345 in category task
+2025-08-12 08:35:31,181 - database - INFO - Added note 17 for user 12345 in category task
+2025-08-12 08:35:31,182 - database - INFO - Added note 18 for user 12345 in category task
+2025-08-12 08:35:31,183 - database - INFO - Added note 19 for user 12345 in category task
+2025-08-12 08:35:31,183 - database - INFO - Retrieved 10 notes for user 12345 (page 1, total: 19)
+2025-08-12 08:35:31,184 - database - INFO - Retrieved 9 notes for user 12345 (page 2, total: 19)
+2025-08-12 08:35:31,184 - database - INFO - Added reminder record for user 12345, note 1, job test_job_123
+2025-08-12 08:35:31,184 - database - INFO - Retrieved 1 reminders for user 12345
+2025-08-12 08:35:31,185 - database - INFO - Removed reminder record for job test_job_123
+2025-08-12 08:35:31,185 - database - INFO - Deleted note 1 for user 12345
+2025-08-12 08:35:31,186 - database - INFO - Retrieved 10 notes for user 12345 (page 1, total: 18)
+2025-08-12 08:35:41,129 - llm_client - INFO - LLM client initialized with API: http://localhost:11434/api/generate, model: llama2
+2025-08-12 08:35:41,136 - database - INFO - Database tables created/verified
+2025-08-12 08:35:41,136 - database - INFO - Database initialized with file: /tmp/tmpt03iizod.db
+2025-08-12 08:35:41,138 - database - INFO - Added note 1 for user 12345 in category task
+2025-08-12 08:35:41,140 - database - INFO - Added note 2 for user 12345 in category idea
+2025-08-12 08:35:41,143 - database - INFO - Added note 3 for user 12345 in category quote
+2025-08-12 08:35:41,144 - database - INFO - Added note 4 for user 12345 in category other
+2025-08-12 08:35:41,145 - database - INFO - Retrieved 4 notes for user 12345 (page 1, total: 4)
+2025-08-12 08:35:41,145 - database - INFO - Retrieved 1 notes for user 12345 (page 1, total: 1)
+2025-08-12 08:35:41,145 - database - INFO - Search for 'groceries' returned 1 notes for user 12345 (page 1, total: 1)
+2025-08-12 08:35:41,147 - database - INFO - Added note 5 for user 12345 in category task
+2025-08-12 08:35:41,149 - database - INFO - Added note 6 for user 12345 in category task
+2025-08-12 08:35:41,151 - database - INFO - Added note 7 for user 12345 in category task
+2025-08-12 08:35:41,157 - database - INFO - Added note 8 for user 12345 in category task
+2025-08-12 08:35:41,159 - database - INFO - Added note 9 for user 12345 in category task
+2025-08-12 08:35:41,161 - database - INFO - Added note 10 for user 12345 in category task
+2025-08-12 08:35:41,164 - database - INFO - Added note 11 for user 12345 in category task
+2025-08-12 08:35:41,165 - database - INFO - Added note 12 for user 12345 in category task
+2025-08-12 08:35:41,166 - database - INFO - Added note 13 for user 12345 in category task
+2025-08-12 08:35:41,168 - database - INFO - Added note 14 for user 12345 in category task
+2025-08-12 08:35:41,170 - database - INFO - Added note 15 for user 12345 in category task
+2025-08-12 08:35:41,172 - database - INFO - Added note 16 for user 12345 in category task
+2025-08-12 08:35:41,174 - database - INFO - Added note 17 for user 12345 in category task
+2025-08-12 08:35:41,176 - database - INFO - Added note 18 for user 12345 in category task
+2025-08-12 08:35:41,178 - database - INFO - Added note 19 for user 12345 in category task
+2025-08-12 08:35:41,178 - database - INFO - Retrieved 10 notes for user 12345 (page 1, total: 19)
+2025-08-12 08:35:41,178 - database - INFO - Retrieved 9 notes for user 12345 (page 2, total: 19)
+2025-08-12 08:35:41,180 - database - INFO - Added reminder record for user 12345, note 1, job test_job_123
+2025-08-12 08:35:41,180 - database - INFO - Retrieved 1 reminders for user 12345
+2025-08-12 08:35:41,182 - database - INFO - Removed reminder record for job test_job_123
+2025-08-12 08:35:41,184 - database - INFO - Deleted note 1 for user 12345
+2025-08-12 08:35:41,184 - database - INFO - Retrieved 10 notes for user 12345 (page 1, total: 18)
+2025-08-12 08:35:41,185 - database - INFO - Retrieved 10 notes for user 12345 (page 1, total: 18)
+2025-08-12 08:35:41,185 - llm_client - INFO - Attempting to categorize note: Buy groceries tomorrow...
+2025-08-12 08:35:41,187 - llm_client - WARNING - LLM categorization failed for note: Buy groceries tomorrow..., falling back to 'other'
+2025-08-12 08:35:41,187 - llm_client - INFO - Attempting to categorize note: Great idea for a new app...
+2025-08-12 08:35:41,189 - llm_client - WARNING - LLM categorization failed for note: Great idea for a new app..., falling back to 'other'
+2025-08-12 08:35:41,189 - llm_client - INFO - Attempting to categorize note: Be the change you wish to see in the world...
+2025-08-12 08:35:41,190 - llm_client - WARNING - LLM categorization failed for note: Be the change you wish to see in the world..., falling back to 'other'
+2025-08-12 08:35:41,190 - llm_client - INFO - Attempting to categorize note: Random thought about life...
+2025-08-12 08:35:41,192 - llm_client - WARNING - LLM categorization failed for note: Random thought about life..., falling back to 'other'
