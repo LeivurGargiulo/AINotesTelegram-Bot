@@ -31,7 +31,9 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
 
 1. **Python 3.8+**
 2. **Telegram Bot Token** (get from [@BotFather](https://t.me/BotFather))
-3. **Local LLM** (Ollama, local OpenAI-compatible API, etc.)
+3. **LLM Access** (choose one):
+   - **OpenRouter API Key** (recommended for cloud models)
+   - **Local LLM** (Ollama, local OpenAI-compatible API, etc.)
 
 ## Installation
 
@@ -51,9 +53,18 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
    BOT_TOKEN=your_actual_bot_token_here
    ```
 
-4. **Set up a local LLM** (choose one option):
+4. **Set up LLM** (choose one option):
 
-   **Option A: Ollama (Recommended)**
+   **Option A: OpenRouter (Recommended for cloud models)**
+   ```bash
+   # Get API key from https://openrouter.ai/
+   # Add to your .env file:
+   USE_OPENROUTER=true
+   OPENROUTER_API_KEY=your_api_key_here
+   OPENROUTER_MODEL=openai/gpt-3.5-turbo  # or any other model
+   ```
+
+   **Option B: Ollama (Local models)**
    ```bash
    # Install Ollama
    curl -fsSL https://ollama.ai/install.sh | sh
@@ -65,7 +76,7 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
    ollama serve
    ```
 
-   **Option B: Other local LLM**
+   **Option C: Other local LLM**
    - Set up any OpenAI-compatible API locally
    - Update `LLM_API_URL` in your `.env` file
    - Update `LLM_MODEL` to match your model name
@@ -125,6 +136,10 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
 | `DATABASE_FILE` | SQLite database file path | `notes_bot.db` |
 | `LLM_API_URL` | LLM API endpoint | `http://localhost:11434/api/generate` |
 | `LLM_MODEL` | LLM model name | `llama2` |
+| `USE_OPENROUTER` | Enable OpenRouter API | `false` |
+| `OPENROUTER_API_KEY` | OpenRouter API key | - |
+| `OPENROUTER_BASE_URL` | OpenRouter API base URL | `https://openrouter.ai/api/v1` |
+| `OPENROUTER_MODEL` | OpenRouter model name | `openai/gpt-3.5-turbo` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 | `LOG_FILE` | Log file path | `bot.log` |
 | `REMINDER_TIMEZONE` | Timezone for reminders | `UTC` |
@@ -133,7 +148,13 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
 
 The bot supports multiple LLM APIs:
 
-**Ollama API** (default):
+**OpenRouter API** (recommended for cloud-based models):
+- Set `USE_OPENROUTER=true` and provide your `OPENROUTER_API_KEY`
+- Access to 100+ models including GPT-4, Claude, Gemini, and more
+- Models: `openai/gpt-4`, `anthropic/claude-3-opus`, `google/gemini-pro`, etc.
+- Get API key from [OpenRouter](https://openrouter.ai/)
+
+**Ollama API** (default for local models):
 - Endpoint: `http://localhost:11434/api/generate`
 - Models: llama2, mistral, codellama, etc.
 
@@ -141,7 +162,7 @@ The bot supports multiple LLM APIs:
 - Endpoint: `http://localhost:8000/v1/chat/completions`
 - Models: Any OpenAI-compatible model
 
-The bot automatically tries different API formats and falls back to 'other' category if LLM is unavailable.
+The bot automatically tries OpenRouter first (if enabled), then falls back to local LLM APIs, and finally defaults to 'other' category if all LLMs are unavailable.
 
 ## Testing
 
@@ -195,7 +216,8 @@ The test suite covers:
    - Verify the bot is running with `python bot.py`
 
 2. **LLM categorization not working**:
-   - Ensure your local LLM is running
+   - **For OpenRouter**: Check `OPENROUTER_API_KEY` and `USE_OPENROUTER=true` in `.env`
+   - **For local LLM**: Ensure your local LLM is running
    - Check `LLM_API_URL` and `LLM_MODEL` in `.env`
    - The bot will fall back to 'other' category if LLM is unavailable
 
