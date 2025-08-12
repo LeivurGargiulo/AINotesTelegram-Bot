@@ -6,7 +6,7 @@ import requests
 import json
 import logging
 from typing import Optional
-from config import LLM_API_URL, LLM_MODEL, VALID_CATEGORIES
+from config import LLM_API_URL, LLM_MODEL, VALID_CATEGORIES, OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_MODEL, USE_OPENROUTER
 from logger import get_logger
 
 # Set up logging
@@ -21,18 +21,36 @@ class LLMClient:
         self.api_url = api_url
         self.model = model
         self.categorization_prompt = "Categorize this note as 'task', 'idea', 'quote', or 'other'. Return only the category."
+        
+        # OpenRouter configuration
+        self.use_openrouter = USE_OPENROUTER
+        self.openrouter_api_key = OPENROUTER_API_KEY
+        self.openrouter_base_url = OPENROUTER_BASE_URL
+        self.openrouter_model = OPENROUTER_MODEL
+        
         logger.info(f"LLM client initialized with API: {api_url}, model: {model}")
+        if self.use_openrouter:
+            logger.info(f"OpenRouter enabled with model: {self.openrouter_model}")
+        else:
+            logger.info("OpenRouter disabled, using local LLM")
     
     def categorize_note_with_llm(self, note_text: str) -> str:
         """
-        Categorize a note using the local LLM.
+        Categorize a note using the LLM.
         Returns one of: 'task', 'idea', 'quote', 'other'
         Falls back to 'other' if LLM is unavailable or returns invalid category.
         """
         try:
             logger.info(f"Attempting to categorize note: {note_text[:50]}...")
             
-            # Try Ollama API first (most common local LLM)
+            # Try OpenRouter API first if enabled
+            if self.use_openrouter and self.openrouter_api_key:
+                category = self._try_openrouter_api(note_text)
+                if category and category in VALID_CATEGORIES:
+                    logger.info(f"Successfully categorized note as '{category}' using OpenRouter API")
+                    return category
+            
+            # Try Ollama API (most common local LLM)
             category = self._try_ollama_api(note_text)
             if category and category in VALID_CATEGORIES:
                 logger.info(f"Successfully categorized note as '{category}' using Ollama API")
@@ -130,6 +148,59 @@ class LLMClient:
             return None
         except Exception as e:
             logger.debug(f"OpenAI-compatible API failed: {e}")
+            return None
+    
+    def _try_openrouter_api(self, note_text: str) -> Optional[str]:
+        """Try to categorize using OpenRouter API."""
+        try:
+            if not self.openrouter_api_key:
+                logger.debug("OpenRouter API key not configured")
+                return None
+            
+            url = f"{self.openrouter_base_url}/chat/completions"
+            
+            payload = {
+                "model": self.openrouter_model,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": self.categorization_prompt
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Note: {note_text}"
+                    }
+                ],
+                "temperature": 0.1,
+                "max_tokens": 10
+            }
+            
+            headers = {
+                "Authorization": f"Bearer {self.openrouter_api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/your-repo/telegram-notes-bot",  # Optional but recommended
+                "X-Title": "Telegram Notes Bot"  # Optional but recommended
+            }
+            
+            logger.debug(f"Sending request to OpenRouter API: {url}")
+            response = requests.post(url, json=payload, headers=headers, timeout=15)
+            response.raise_for_status()
+            
+            result = response.json()
+            category = result.get('choices', [{}])[0].get('message', {}).get('content', '').strip().lower()
+            
+            # Clean up the response to extract just the category
+            category = self._clean_category_response(category)
+            
+            logger.debug(f"OpenRouter API raw response: {result}")
+            logger.debug(f"OpenRouter API categorized note as: {category}")
+            return category
+            
+        except requests.exceptions.RequestException as e:
+            logger.debug(f"OpenRouter API request failed: {e}")
+            return None
+        except Exception as e:
+            logger.debug(f"OpenRouter API failed: {e}")
             return None
     
     def _clean_category_response(self, response: str) -> str:
