@@ -1,25 +1,31 @@
 # Telegram Notes Bot
 
-A smart Telegram bot that helps you organize your thoughts with automatic categorization using a local LLM. The bot can categorize notes into tasks, ideas, quotes, or other categories, and provides powerful search and management features.
+A smart Telegram bot that helps you organize your thoughts with automatic categorization using a local LLM. The bot can categorize notes into tasks, ideas, quotes, or other categories, and provides powerful search, pagination, and reminder features.
 
 ## Features
 
 - **Smart Note Categorization**: Automatically categorizes notes using a local LLM
 - **Multiple Categories**: Supports task, idea, quote, and other categories
-- **Search Functionality**: Find notes by keywords
+- **Pagination Support**: Navigate through large numbers of notes with inline buttons
+- **Search Functionality**: Find notes by keywords with pagination
+- **Reminder System**: Set reminders for notes with flexible time formats
+- **Structured Logging**: Comprehensive logging with different levels and file rotation
 - **User-Friendly Interface**: Clean, intuitive commands with helpful responses
 - **Data Persistence**: SQLite database for reliable data storage
 - **Error Handling**: Graceful error handling with user-friendly messages
 - **Scalable Architecture**: Modular design for easy extension
+- **Comprehensive Testing**: Unit tests for all major functionality
 
 ## Commands
 
 - `/start` - Welcome message
 - `/help` - Show all available commands
 - `/add <note text>` - Add a new note with automatic categorization
-- `/list [category]` - List all notes or filter by category
+- `/list [category]` - List all notes or filter by category (paginated)
 - `/delete <note_id>` - Delete a note by ID
-- `/search <keyword>` - Search notes by keyword
+- `/search <keyword>` - Search notes by keyword (paginated)
+- `/remind <note_id> <time>` - Set a reminder for a note
+- `/reminders` - List your scheduled reminders
 
 ## Prerequisites
 
@@ -82,7 +88,32 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
    /list task
    /search meeting
    /delete 5
+   /remind 5 in 2 hours
+   /reminders
    ```
+
+## New Features
+
+### Pagination
+- Notes are displayed in pages of 10 items each
+- Use inline "Previous" and "Next" buttons to navigate
+- Works with both `/list` and `/search` commands
+- Shows current page and total count
+
+### Reminder System
+- Set reminders for any note using `/remind <note_id> <time>`
+- Supports multiple time formats:
+  - Relative: `in 30 minutes`, `in 2 hours`, `in 1 day`
+  - Absolute time: `2:30pm`, `14:30`
+  - Specific date: `2024-01-15`
+- View all scheduled reminders with `/reminders`
+- Automatic reminder delivery via Telegram messages
+
+### Structured Logging
+- Configurable log levels (DEBUG, INFO, WARNING, ERROR)
+- Log rotation with file size limits
+- Separate console and file logging
+- Detailed logging for all major operations
 
 ## Configuration
 
@@ -94,105 +125,105 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
 | `DATABASE_FILE` | SQLite database file path | `notes_bot.db` |
 | `LLM_API_URL` | LLM API endpoint | `http://localhost:11434/api/generate` |
 | `LLM_MODEL` | LLM model name | `llama2` |
+| `LOG_LEVEL` | Logging level | `INFO` |
+| `LOG_FILE` | Log file path | `bot.log` |
+| `REMINDER_TIMEZONE` | Timezone for reminders | `UTC` |
 
 ### LLM Integration
 
 The bot supports multiple LLM APIs:
 
-1. **Ollama** (default): Uses the Ollama API format
-2. **OpenAI-compatible**: Uses OpenAI-compatible API format
+**Ollama API** (default):
+- Endpoint: `http://localhost:11434/api/generate`
+- Models: llama2, mistral, codellama, etc.
 
-The bot will automatically try both formats and fall back to 'other' category if the LLM is unavailable.
+**OpenAI-compatible API**:
+- Endpoint: `http://localhost:8000/v1/chat/completions`
+- Models: Any OpenAI-compatible model
+
+The bot automatically tries different API formats and falls back to 'other' category if LLM is unavailable.
+
+## Testing
+
+Run the comprehensive test suite:
+
+```bash
+# Run all tests
+python test_bot.py
+
+# Run with pytest (if installed)
+pytest test_bot.py -v
+```
+
+The test suite covers:
+- Database operations (CRUD, pagination, search)
+- LLM client functionality and fallback logic
+- Reminder scheduler operations
+- Integration tests for complete workflows
 
 ## Project Structure
 
 ```
-├── bot.py              # Main bot application
-├── bot_handlers.py     # Command handlers
-├── database.py         # Database operations
-├── llm_client.py       # LLM integration
-├── config.py           # Configuration settings
-├── requirements.txt    # Python dependencies
-├── .env.example        # Environment variables template
-└── README.md          # This file
+├── bot.py                 # Main bot application
+├── bot_handlers.py        # Command handlers and business logic
+├── database.py           # Database operations and models
+├── llm_client.py         # LLM integration and categorization
+├── reminder_scheduler.py # Reminder scheduling functionality
+├── logger.py             # Structured logging configuration
+├── config.py             # Configuration settings
+├── test_bot.py           # Comprehensive test suite
+├── requirements.txt      # Python dependencies
+├── .env.example          # Environment variables template
+└── README.md             # This file
 ```
 
-## Database Schema
+## Dependencies
 
-The bot uses SQLite with the following schema:
-
-```sql
-CREATE TABLE notes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    note_text TEXT NOT NULL,
-    category TEXT NOT NULL,
-    timestamp TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-```
-
-## Extending the Bot
-
-The modular architecture makes it easy to add new features:
-
-1. **Add new commands**: Create handlers in `bot_handlers.py`
-2. **Add new LLM providers**: Extend `llm_client.py`
-3. **Add new data fields**: Modify `database.py` schema
-4. **Add scheduling**: Integrate with `apscheduler` or similar
-
-### Example: Adding Reminder Functionality
-
-```python
-# In bot_handlers.py
-async def set_reminder_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Add reminder logic here
-    pass
-
-# In bot.py
-application.add_handler(CommandHandler("remind", set_reminder_command))
-```
+- `python-telegram-bot==20.7` - Telegram Bot API wrapper
+- `requests==2.31.0` - HTTP requests for LLM API
+- `python-dotenv==1.0.0` - Environment variable management
+- `APScheduler==3.10.4` - Task scheduling for reminders
+- `pytest==7.4.3` - Testing framework
+- `pytest-asyncio==0.21.1` - Async testing support
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"BOT_TOKEN environment variable is required"**
-   - Make sure you've created a `.env` file with your bot token
-   - Verify the token is correct (get a new one from @BotFather if needed)
+1. **Bot not responding**:
+   - Check if `BOT_TOKEN` is set correctly in `.env`
+   - Verify the bot is running with `python bot.py`
 
-2. **"LLM categorization failed"**
-   - Check if your local LLM is running
-   - Verify the API URL and model name in `.env`
-   - Check LLM logs for errors
+2. **LLM categorization not working**:
+   - Ensure your local LLM is running
+   - Check `LLM_API_URL` and `LLM_MODEL` in `.env`
+   - The bot will fall back to 'other' category if LLM is unavailable
 
-3. **"Database error"**
-   - Ensure the bot has write permissions in the directory
-   - Check if the database file is corrupted (delete and restart)
+3. **Reminders not working**:
+   - Check if the bot is running continuously
+   - Verify `REMINDER_TIMEZONE` is set correctly
+   - Check logs for scheduler errors
 
-4. **"Invalid category"**
-   - The LLM returned an unexpected category
-   - The bot will automatically fall back to 'other'
+4. **Database errors**:
+   - Ensure write permissions for the database file
+   - Check `DATABASE_FILE` path in `.env`
 
 ### Logs
 
-The bot provides detailed logging. Check the console output for:
-- Bot startup messages
-- LLM API calls and responses
-- Database operations
-- Error details
-
-## Security Considerations
-
-- Keep your bot token secure and never commit it to version control
-- The bot only stores notes for authenticated users
-- Each user can only access their own notes
-- Consider using environment variables for sensitive configuration
+Check the log file (default: `bot.log`) for detailed information:
+```bash
+tail -f bot.log
+```
 
 ## Contributing
 
-Feel free to submit issues, feature requests, or pull requests to improve the bot!
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
 
 ## License
 
-This project is open source. Feel free to use and modify as needed.
+This project is open source and available under the MIT License.

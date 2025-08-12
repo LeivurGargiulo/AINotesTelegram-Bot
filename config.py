@@ -2,6 +2,7 @@
 Configuration settings for the Telegram Notes Bot.
 """
 import os
+import logging
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -25,3 +26,14 @@ VALID_CATEGORIES = ['task', 'idea', 'quote', 'other']
 # Display settings
 MAX_PREVIEW_LENGTH = 50
 TIMESTAMP_FORMAT = '%Y-%m-%d %H:%M:%S'
+
+# Pagination settings
+NOTES_PER_PAGE = 10
+
+# Logging configuration
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+LOG_FILE = os.getenv('LOG_FILE', 'bot.log')
+
+# Reminder settings
+REMINDER_TIMEZONE = os.getenv('REMINDER_TIMEZONE', 'UTC')
