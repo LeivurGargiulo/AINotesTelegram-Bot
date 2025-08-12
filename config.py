@@ -16,15 +16,8 @@ if not BOT_TOKEN:
 # Database configuration
 DATABASE_FILE = os.getenv('DATABASE_FILE', 'notes_bot.db')
 
-# LLM configuration
-LLM_API_URL = os.getenv('LLM_API_URL', 'http://localhost:11434/api/generate')
-LLM_MODEL = os.getenv('LLM_MODEL', 'llama2')
-
-# OpenRouter configuration
-OPENROUTER_API_KEY = os.getenv('OPENROUTER_API_KEY')
-OPENROUTER_BASE_URL = os.getenv('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1')
-OPENROUTER_MODEL = os.getenv('OPENROUTER_MODEL', 'openai/gpt-3.5-turbo')
-USE_OPENROUTER = os.getenv('USE_OPENROUTER', 'false').lower() == 'true'
+# Note categorization settings
+# The bot now uses keyword-based categorization instead of AI
 
 # Note categories
 VALID_CATEGORIES = ['task', 'idea', 'quote', 'other']

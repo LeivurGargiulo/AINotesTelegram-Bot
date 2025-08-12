@@ -9,7 +9,7 @@ from telegram.ext import ContextTypes
 from telegram.constants import ParseMode
 
 from database import NotesDatabase
-from llm_client import categorize_note_with_llm
+from note_categorizer import categorize_note_with_keywords
 from config import VALID_CATEGORIES, MAX_PREVIEW_LENGTH, NOTES_PER_PAGE
 from logger import get_logger
 from reminder_scheduler import scheduler
@@ -28,7 +28,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     welcome_message = (
         "🎉 Welcome to the Notes Bot!\n\n"
-        "I can help you organize your thoughts with smart categorization.\n\n"
+        "I can help you organize your thoughts with automatic categorization.\n\n"
         "Use /help to see all available commands."
     )
     await update.message.reply_text(welcome_message)
@@ -42,7 +42,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text = (
         "📝 **Notes Bot Commands**\n\n"
         "**Add a note:**\n"
-        "`/add <note text>` - Add a new note with automatic categorization\n\n"
+        "`/add <note text>` - Add a new note with keyword-based categorization\n\n"
         "**List notes:**\n"
         "`/list` - Show all your notes (paginated)\n"
         "`/list <category>` - Show notes from a specific category\n"
@@ -99,8 +99,8 @@ async def add_note_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Send typing indicator
         await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
         
-        # Categorize the note using LLM
-        category = categorize_note_with_llm(note_text)
+        # Categorize the note using keyword matching
+        category = categorize_note_with_keywords(note_text)
         logger.info(f"Note categorized as: {category}")
         
         # Add note to database

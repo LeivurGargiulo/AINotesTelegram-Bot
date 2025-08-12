@@ -134,35 +134,21 @@ A smart Telegram bot that helps you organize your thoughts with automatic catego
 |----------|-------------|---------|
 | `BOT_TOKEN` | Telegram bot token (required) | - |
 | `DATABASE_FILE` | SQLite database file path | `notes_bot.db` |
-| `LLM_API_URL` | LLM API endpoint | `http://localhost:11434/api/generate` |
-| `LLM_MODEL` | LLM model name | `llama2` |
-| `USE_OPENROUTER` | Enable OpenRouter API | `false` |
-| `OPENROUTER_API_KEY` | OpenRouter API key | - |
-| `OPENROUTER_BASE_URL` | OpenRouter API base URL | `https://openrouter.ai/api/v1` |
-| `OPENROUTER_MODEL` | OpenRouter model name | `openai/gpt-3.5-turbo` |
 | `LOG_LEVEL` | Logging level | `INFO` |
 | `LOG_FILE` | Log file path | `bot.log` |
 | `REMINDER_TIMEZONE` | Timezone for reminders | `UTC` |
 
-### LLM Integration
+### Note Categorization
 
-The bot supports multiple LLM APIs:
+The bot uses keyword-based categorization to automatically organize your notes into categories:
 
-**OpenRouter API** (recommended for cloud-based models):
-- Set `USE_OPENROUTER=true` and provide your `OPENROUTER_API_KEY`
-- Access to 100+ models including GPT-4, Claude, Gemini, and more
-- Models: `openai/gpt-4`, `anthropic/claude-3-opus`, `google/gemini-pro`, etc.
-- Get API key from [OpenRouter](https://openrouter.ai/)
+**Categories:**
+- **task**: Notes containing action words like "buy", "call", "meeting", "todo", etc.
+- **idea**: Notes containing creative words like "idea", "project", "create", "improve", etc.
+- **quote**: Notes containing quoted text or words like "said", "quote", "inspirational", etc.
+- **other**: Notes that don't match specific patterns
 
-**Ollama API** (default for local models):
-- Endpoint: `http://localhost:11434/api/generate`
-- Models: llama2, mistral, codellama, etc.
-
-**OpenAI-compatible API**:
-- Endpoint: `http://localhost:8000/v1/chat/completions`
-- Models: Any OpenAI-compatible model
-
-The bot automatically tries OpenRouter first (if enabled), then falls back to local LLM APIs, and finally defaults to 'other' category if all LLMs are unavailable.
+The categorization is fast, reliable, and works offline without requiring any external APIs.
 
 ## Testing
 
@@ -178,7 +164,7 @@ pytest test_bot.py -v
 
 The test suite covers:
 - Database operations (CRUD, pagination, search)
-- LLM client functionality and fallback logic
+- Keyword-based categorization functionality
 - Reminder scheduler operations
 - Integration tests for complete workflows
 
@@ -188,7 +174,7 @@ The test suite covers:
 ├── bot.py                 # Main bot application
 ├── bot_handlers.py        # Command handlers and business logic
 ├── database.py           # Database operations and models
-├── llm_client.py         # LLM integration and categorization
+├── note_categorizer.py   # Keyword-based note categorization
 ├── reminder_scheduler.py # Reminder scheduling functionality
 ├── logger.py             # Structured logging configuration
 ├── config.py             # Configuration settings
@@ -201,7 +187,7 @@ The test suite covers:
 ## Dependencies
 
 - `python-telegram-bot==20.7` - Telegram Bot API wrapper
-- `requests==2.31.0` - HTTP requests for LLM API
+
 - `python-dotenv==1.0.0` - Environment variable management
 - `APScheduler==3.10.4` - Task scheduling for reminders
 - `pytest==7.4.3` - Testing framework
@@ -215,11 +201,10 @@ The test suite covers:
    - Check if `BOT_TOKEN` is set correctly in `.env`
    - Verify the bot is running with `python bot.py`
 
-2. **LLM categorization not working**:
-   - **For OpenRouter**: Check `OPENROUTER_API_KEY` and `USE_OPENROUTER=true` in `.env`
-   - **For local LLM**: Ensure your local LLM is running
-   - Check `LLM_API_URL` and `LLM_MODEL` in `.env`
-   - The bot will fall back to 'other' category if LLM is unavailable
+2. **Note categorization not working**:
+   - The bot uses keyword-based categorization that works offline
+   - Check logs for any categorization errors
+   - Notes that don't match patterns will be categorized as 'other'
 
 3. **Reminders not working**:
    - Check if the bot is running continuously
