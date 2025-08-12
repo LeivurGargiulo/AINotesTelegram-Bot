@@ -16,7 +16,7 @@ from unittest.mock import Mock, patch, AsyncMock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from database import NotesDatabase
-from llm_client import categorize_note_with_llm, LLMClient
+from note_categorizer import categorize_note_with_keywords
 from reminder_scheduler import ReminderScheduler, scheduler
 from config import VALID_CATEGORIES, NOTES_PER_PAGE
 
@@ -169,78 +169,27 @@ class TestDatabase:
         assert len(reminders) == 0
 
 
-class TestLLMClient:
-    """Test LLM client functionality."""
+class TestNoteCategorizer:
+    """Test note categorization functionality."""
     
-    def test_llm_client_initialization(self):
-        """Test LLM client initialization."""
-        client = LLMClient("http://test:11434/api/generate", "test-model")
-        assert client.api_url == "http://test:11434/api/generate"
-        assert client.model == "test-model"
-    
-    @patch('requests.post')
-    def test_ollama_api_success(self, mock_post):
-        """Test successful Ollama API categorization."""
-        # Mock successful response
-        mock_response = Mock()
-        mock_response.json.return_value = {"response": "task"}
-        mock_response.raise_for_status.return_value = None
-        mock_post.return_value = mock_response
-        
-        client = LLMClient("http://test:11434/api/generate", "test-model")
-        category = client._try_ollama_api("Buy groceries")
-        
+    def test_categorize_note_with_keywords_success(self):
+        """Test successful note categorization with keywords."""
+        # Test task categorization
+        category = categorize_note_with_keywords("Buy groceries tomorrow")
         assert category == "task"
-        mock_post.assert_called_once()
+        
+        # Test idea categorization
+        category = categorize_note_with_keywords("Great idea for a new app")
+        assert category == "idea"
+        
+        # Test quote categorization
+        category = categorize_note_with_keywords('"Be the change you wish to see in the world"')
+        assert category == "quote"
     
-    @patch('requests.post')
-    def test_ollama_api_failure(self, mock_post):
-        """Test Ollama API failure handling."""
-        # Mock failed request
-        mock_post.side_effect = Exception("Connection failed")
-        
-        client = LLMClient("http://test:11434/api/generate", "test-model")
-        category = client._try_ollama_api("Buy groceries")
-        
-        assert category is None
-    
-    def test_clean_category_response(self):
-        """Test category response cleaning."""
-        client = LLMClient()
-        
-        # Test various response formats
-        test_cases = [
-            ("task", "task"),
-            ('"task"', "task"),
-            ("Category: task", "task"),
-            ("The category is: task.", "task"),
-            ("Answer: task!", "task"),
-            ("Response: task;", "task"),
-        ]
-        
-        for input_response, expected in test_cases:
-            result = client._clean_category_response(input_response)
-            assert result == expected
-    
-    @patch('requests.post')
-    def test_categorize_note_with_llm_success(self, mock_post):
-        """Test successful note categorization."""
-        # Mock successful Ollama response
-        mock_response = Mock()
-        mock_response.json.return_value = {"response": "task"}
-        mock_response.raise_for_status.return_value = None
-        mock_post.return_value = mock_response
-        
-        category = categorize_note_with_llm("Buy groceries tomorrow")
-        assert category == "task"
-    
-    @patch('requests.post')
-    def test_categorize_note_with_llm_fallback(self, mock_post):
-        """Test LLM fallback to 'other' category."""
-        # Mock failed requests
-        mock_post.side_effect = Exception("Connection failed")
-        
-        category = categorize_note_with_llm("Buy groceries tomorrow")
+    def test_categorize_note_with_keywords_fallback(self):
+        """Test keyword categorization fallback to 'other' category."""
+        # Test random text that doesn't match any patterns
+        category = categorize_note_with_keywords("Random thought about life")
         assert category == "other"
 
 
@@ -382,21 +331,14 @@ class TestIntegration:
         note = db.get_note_by_id(user_id, note_id)
         assert note is None
     
-    @patch('requests.post')
-    def test_llm_integration_with_database(self, mock_post, temp_db):
-        """Test LLM integration with database operations."""
-        # Mock successful LLM response
-        mock_response = Mock()
-        mock_response.json.return_value = {"response": "idea"}
-        mock_response.raise_for_status.return_value = None
-        mock_post.return_value = mock_response
-        
+    def test_keyword_categorization_integration_with_database(self, temp_db):
+        """Test keyword categorization integration with database operations."""
         db = NotesDatabase(temp_db)
         user_id = 12345
         
-        # Add note with LLM categorization
+        # Add note with keyword categorization
         note_text = "Great idea for a new mobile app"
-        category = categorize_note_with_llm(note_text)
+        category = categorize_note_with_keywords(note_text)
         note_id = db.add_note(user_id, note_text, category)
         
         # Verify categorization
@@ -431,12 +373,12 @@ def run_tests():
         finally:
             os.unlink(temp_db.name)
     
-    # Test LLM client
-    print("\n🤖 Testing LLM client...")
-    test_llm = TestLLMClient()
-    test_llm.test_llm_client_initialization()
-    test_llm.test_clean_category_response()
-    print("  ✅ LLM client tests passed!")
+    # Test keyword categorization
+    print("\n🔍 Testing keyword categorization...")
+    test_categorizer = TestNoteCategorizer()
+    test_categorizer.test_categorize_note_with_keywords_success()
+    test_categorizer.test_categorize_note_with_keywords_fallback()
+    print("  ✅ Keyword categorization tests passed!")
     
     # Test reminder scheduler
     print("\n⏰ Testing reminder scheduler...")

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from database import NotesDatabase
-from llm_client import categorize_note_with_llm
+from note_categorizer import categorize_note_with_keywords
 from config import VALID_CATEGORIES, NOTES_PER_PAGE
 
 
@@ -127,7 +127,7 @@ def test_llm_categorization():
     
     for note_text in test_notes:
         try:
-            category = categorize_note_with_llm(note_text)
+            category = categorize_note_with_keywords(note_text)
             if category in VALID_CATEGORIES:
                 print(f"  ✅ '{note_text[:30]}...' → {category}")
             else:
