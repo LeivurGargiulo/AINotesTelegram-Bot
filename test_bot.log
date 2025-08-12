@@ -71,3 +71,45 @@
 2025-08-12 08:35:41,190 - llm_client - WARNING - LLM categorization failed for note: Be the change you wish to see in the world..., falling back to 'other'
 2025-08-12 08:35:41,190 - llm_client - INFO - Attempting to categorize note: Random thought about life...
 2025-08-12 08:35:41,192 - llm_client - WARNING - LLM categorization failed for note: Random thought about life..., falling back to 'other'
+2025-08-12 13:28:01,331 - note_categorizer - INFO - Note categorizer initialized with keyword patterns
+2025-08-12 13:28:16,225 - note_categorizer - INFO - Note categorizer initialized with keyword patterns
+2025-08-12 13:28:16,335 - database - INFO - Database tables created/verified
+2025-08-12 13:28:16,335 - database - INFO - Database initialized with file: test_notes_bot.db
+2025-08-12 13:28:16,340 - database - INFO - Database tables created/verified
+2025-08-12 13:28:16,340 - database - INFO - Database initialized with file: test_notes.db
+2025-08-12 13:28:16,340 - note_categorizer - INFO - Categorizing note: Buy groceries tomorrow...
+2025-08-12 13:28:16,340 - note_categorizer - INFO - Note categorized as 'task' with score 2
+2025-08-12 13:28:16,343 - database - INFO - Added note 1 for user 12345 in category task
+2025-08-12 13:28:16,343 - note_categorizer - INFO - Categorizing note: Great idea for a new project...
+2025-08-12 13:28:16,343 - note_categorizer - INFO - Note categorized as 'idea' with score 2
+2025-08-12 13:28:16,345 - database - INFO - Added note 2 for user 12345 in category idea
+2025-08-12 13:28:16,345 - note_categorizer - INFO - Categorizing note: Life is what happens while you're busy making othe...
+2025-08-12 13:28:16,345 - note_categorizer - INFO - No clear category found, defaulting to 'other'
+2025-08-12 13:28:16,347 - database - INFO - Added note 3 for user 12345 in category other
+2025-08-12 13:28:16,347 - note_categorizer - INFO - Categorizing note: Random thought about the weather...
+2025-08-12 13:28:16,347 - note_categorizer - INFO - Note categorized as 'idea' with score 1
+2025-08-12 13:28:16,348 - database - INFO - Added note 4 for user 12345 in category idea
+2025-08-12 13:28:16,349 - database - INFO - Retrieved 4 notes for user 12345 (page 1, total: 4)
+2025-08-12 13:28:16,349 - database - INFO - Retrieved 1 notes for user 12345 (page 1, total: 1)
+2025-08-12 13:28:16,349 - database - INFO - Search for 'groceries' returned 1 notes for user 12345 (page 1, total: 1)
+2025-08-12 13:28:16,349 - database - INFO - Retrieved note 1 for user 12345
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: Buy groceries tomorrow...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Note categorized as 'task' with score 2
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: Call mom at 3pm...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Note categorized as 'task' with score 1
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: Great idea for a startup...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Note categorized as 'idea' with score 2
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: Innovative solution to climate change...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Note categorized as 'idea' with score 1
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: Life is what happens while you're busy making othe...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - No clear category found, defaulting to 'other'
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: The only way to do great work is to love what you ...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Note categorized as 'task' with score 1
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: Random thought about the weather...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Note categorized as 'idea' with score 1
+2025-08-12 13:28:16,350 - note_categorizer - INFO - Categorizing note: Interesting fact about penguins...
+2025-08-12 13:28:16,350 - note_categorizer - INFO - No clear category found, defaulting to 'other'
+2025-08-12 13:28:16,350 - database - INFO - Database tables created/verified
+2025-08-12 13:28:16,350 - database - INFO - Database initialized with file: test_notes_bot.db
+2025-08-12 13:28:16,352 - discord_reminder_scheduler - INFO - Discord reminder scheduler started
+2025-08-12 13:28:16,352 - discord_reminder_scheduler - INFO - Discord reminder scheduler stopped
