@@ -186,23 +186,31 @@ class NotesDatabase:
             logger.info(f"Search for '{keyword}' returned {len(notes)} notes for user {user_id} (page {page}, total: {total_count})")
             return notes, total_count
     
-    def get_note_by_id(self, user_id: int, note_id: int) -> Optional[Dict]:
-        """Get a specific note by ID."""
+    def get_note_by_id(self, note_id: int, user_id: Optional[int] = None) -> Optional[Dict]:
+        """Get a specific note by ID, optionally filtered by user."""
         with sqlite3.connect(self.db_file) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.cursor()
-            cursor.execute('''
-                SELECT id, note_text, category, timestamp, created_at
-                FROM notes
-                WHERE id = ? AND user_id = ?
-            ''', (note_id, user_id))
+            
+            if user_id:
+                cursor.execute('''
+                    SELECT id, user_id, note_text, category, timestamp, created_at
+                    FROM notes
+                    WHERE id = ? AND user_id = ?
+                ''', (note_id, user_id))
+            else:
+                cursor.execute('''
+                    SELECT id, user_id, note_text, category, timestamp, created_at
+                    FROM notes
+                    WHERE id = ?
+                ''', (note_id,))
             
             row = cursor.fetchone()
             if row:
-                logger.info(f"Retrieved note {note_id} for user {user_id}")
+                logger.info(f"Retrieved note {note_id}" + (f" for user {user_id}" if user_id else ""))
                 return dict(row)
             else:
-                logger.warning(f"Note {note_id} not found for user {user_id}")
+                logger.warning(f"Note {note_id} not found" + (f" for user {user_id}" if user_id else ""))
                 return None
     
     def get_note_count(self, user_id: int, category: Optional[str] = None) -> int:
